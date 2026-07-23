@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detector tolerance simulation — Richard Chen</title>
+<meta name="description" content="A Monte Carlo simulation checking whether laser-measured detector offsets push a precision neutron-lifetime experiment above its error bound.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBFBF9;
+    --ink: #16181D;
+    --main: #2C3E56;
+    --accent: #146B4E;
+    --border: rgba(22,24,29,0.14);
+    --sans: 'IBM Plex Sans', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+  }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 0 24px 64px; }
+
+  .back { display: inline-block; font-size: 14px; padding: 28px 0 8px; }
+
+  h1 { font-size: 30px; font-weight: 500; color: var(--main); margin: 8px 0 12px; }
+  .subhead { font-size: 16px; opacity: 0.85; margin-bottom: 40px; max-width: 560px; }
+
+  h2.section-label {
+    font-family: var(--mono); font-size: 13px; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent);
+    margin: 44px 0 16px;
+  }
+
+  figure { margin: 0 0 28px; }
+  figure img {
+    width: 100%; display: block; border: 1px solid var(--border);
+    border-radius: 8px; background: #fff;
+  }
+  figcaption { font-size: 14px; opacity: 0.8; margin-top: 8px; line-height: 1.5; }
+
+  h3 { font-size: 18px; font-weight: 500; color: var(--main); margin: 28px 0 10px; }
+  p { margin-bottom: 16px; }
+  .num { font-family: var(--mono); }
+
+  .cta {
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: 24px 0; margin: 40px 0; text-align: center;
+  }
+  .repo-link { display: inline-block; font-weight: 500; margin-bottom: 6px; }
+
+  footer { padding: 8px 0 40px; font-size: 14px; opacity: 0.75; text-align: center; }
+  footer a { margin: 0 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="index.html">&larr; Back home</a>
+
+  <h1>Detector tolerance simulation</h1>
+  <p class="subhead">A Monte Carlo simulation built to support the Liu lab's neutron-lifetime experiment: it checks whether real, laser-measured detector offsets push the experiment above its 10⁻⁴ error bound.</p>
+
+  <h2 class="section-label">Figures</h2>
+
+  <figure>
+    <img src="images/geometry-plot.png" alt="A 3D plot of a sphere with six colored detector apertures. Each detector shows a dashed ellipse for its ideal position and a solid ellipse for its laser-measured position. A single point marks the neutron source at the center of the sphere.">
+    <figcaption>The simulated apparatus: six detector apertures on the sphere, with ideal positions (dashed) and laser-measured positions (solid), and the neutron source at center.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="images/scatter-plot.png" alt="A scatter plot titled Measurement Change vs Physical Shift, with six labeled points (Det 0 through Det 5) showing no clear relationship between the size of a detector's physical shift in millimeters and its change in solid angle.">
+    <figcaption>Change in solid angle versus physical shift. There is no correlation: for a source at the center, a pure positional shift should not change the solid angle, and the simulation agrees, so the differences here are statistical noise, not physics.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="images/tip-angle-table.png" alt="A printed results table listing six detectors with their nominal and measured tip angles, the angle deviation, the resulting change in solid angle, and a verdict against a 1e-4 threshold. Five detectors are marked below the threshold and one, detector BR, is marked ABOVE.">
+    <figcaption>Tip angle deviations, the physically real effect. Five detectors sit below the 10⁻⁴ budget; detector BR is three times above it on its own, and the array total stays below only because the deviations partially cancel.</figcaption>
+  </figure>
+
+  <h2 class="section-label">The problem</h2>
+  <p>The Liu lab is measuring the lifetime of a neutron to an accuracy of 10⁻⁴. The experiment detects alpha particles from neutron capture on Boron-10 with an array of six detectors, and the detection rate depends on the solid angle each detector covers, which depends on exactly where each detector sits. The apertures were laser-scanned, and the measured positions differ from the ideal ones by up to a few millimeters. Nobody knew whether those offsets push the error above the 10⁻⁴ bound, so I built a Monte Carlo simulation to support the lab's existing physics simulation and find out.</p>
+
+  <h2 class="section-label">What I did and what I decided</h2>
+  <p>I wrote the simulation in Python. Monte Carlo made sense here because the neutron source itself behaves randomly: the simulation generates particles in random directions and counts how many pass through each detector aperture.</p>
+  <p>Four decisions I can explain the reasoning behind.</p>
+  <p><strong>How I generate directions.</strong> My first version used a complex formula and was much too slow, so I changed it to sampling just z and the azimuthal angle, two random numbers per particle, which gives the same uniform distribution with simpler code and runs much faster.</p>
+  <p><strong>The comparison is paired.</strong> The same particles are thrown at both the ideal and the measured detector placements, so the statistical uncertainty on the difference comes only from particles caught by one placement and not the other. That makes a small difference measurable with far fewer particles than two independent runs would need.</p>
+  <p><strong>Validation.</strong> Each detector's simulated solid angle is checked against the exact analytic formula for a spherical cap, so the simulation is tested against a known answer before I trust it on the question that has no known answer.</p>
+  <p><strong>The threshold test.</strong> Instead of picking a trial count and hoping, the simulation reports its verdict against the 10⁻⁴ threshold at 95% confidence, and if the result is inconclusive it computes how many particles a conclusive answer would need.</p>
+
+  <h2 class="section-label">What came of it</h2>
+  <p>The simulation's ideal-placement result agrees with the exact analytic value for a spherical cap to within <span class="num">0.056%</span>, so the numbers below rest on a method checked against a known answer.</p>
+  <p>For a source at the center of the sphere, a pure positional shift of a detector should not change its solid angle at all, and the simulation agrees: the measured per-detector differences are small and scattered in sign, consistent with statistical noise rather than a real effect.</p>
+  <p>The real, physical effect shows up in the tip angles. Five of the six detectors sit safely below the <span class="num">10⁻⁴</span> budget, but detector BR has a tip deviation of <span class="num">0.47°</span> that puts its own solid-angle error at <span class="num">3.1×10⁻⁴</span>, three times the budget by itself. The full-array total works out to <span class="num">4.3×10⁻⁵</span>, below the bound, but only because the six deviations partially cancel in sign. The simulation's real output was a pointer: one named detector that should be checked before the deviations are trusted to keep cancelling. The next measurement round from the lab will tighten the position uncertainties, and the same notebook re-runs on the new data unchanged.</p>
+
+  <div class="cta">
+    <a class="repo-link" href="https://github.com/richardchen25/Solid-angle-error-bounds">View the notebook on GitHub &rarr;</a>
+    <p>Clone it, run it, and email me if your numbers differ. <a href="mailto:richardrqchen@gmail.com">richardrqchen@gmail.com</a></p>
+  </div>
+
+</div>
+
+<footer>
+  <a href="mailto:richardrqchen@gmail.com">richardrqchen@gmail.com</a>
+  &middot;
+  <a href="https://github.com/richardchen25">GitHub</a>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect x="0" y="0" width="64" height="64" rx="12" fill="#2C3E56"/>
+  <text x="32" y="34" text-anchor="middle" dominant-baseline="central"
+        font-family="'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace"
+        font-size="26" font-weight="600" letter-spacing="-1" fill="#FBFBF9">RC</text>
+</svg>
